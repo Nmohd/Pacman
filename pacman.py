@@ -1,7 +1,7 @@
 #Pacman in Python with PyGame
 #https://github.com/hbokmann/Pacman
   
-import pygame._view
+import pygame
   
 black = (0,0,0)
 white = (255,255,255)
@@ -15,9 +15,9 @@ Trollicon=pygame.image.load('images/Trollman.png')
 pygame.display.set_icon(Trollicon)
 
 #Add music
-pygame.mixer.init()
-pygame.mixer.music.load('pacman.mp3')
-pygame.mixer.music.play(-1, 0.0)
+# pygame.mixer.init()
+# pygame.mixer.music.load('pacman.mp3')
+# pygame.mixer.music.play(-1, 0.0)
 
 # This class represents the bar at the bottom that the player controls
 class Wall(pygame.sprite.Sprite):
@@ -379,6 +379,8 @@ def startGame():
 
   pacman_collide = pygame.sprite.RenderPlain()
 
+  new_ghost_list =  pygame.sprite.RenderPlain()
+
   wall_list = setupRoomOne(all_sprites_list)
 
   gate = setupGate(all_sprites_list)
@@ -403,18 +405,34 @@ def startGame():
   pacman_collide.add(Pacman)
    
   Blinky=Ghost( w, b_h, "images/Blinky.png" )
+  Blinky.name = 'Blinky'
+  Blinky.direction = Blinky_directions
+  Blinky.turn = b_turn
+  Blinky.step = b_steps
   monsta_list.add(Blinky)
   all_sprites_list.add(Blinky)
 
   Pinky=Ghost( w, m_h, "images/Pinky.png" )
+  Pinky.name = 'Pinky'
+  Pinky.direction = Pinky_directions
+  Pinky.turn = p_turn
+  Pinky.step = p_steps
   monsta_list.add(Pinky)
   all_sprites_list.add(Pinky)
    
   Inky=Ghost( i_w, m_h, "images/Inky.png" )
+  Inky.name = 'Inky'
+  Inky.direction = Inky_directions
+  Inky.turn = i_turn
+  Inky.step = i_steps
   monsta_list.add(Inky)
   all_sprites_list.add(Inky)
    
   Clyde=Ghost( c_w, m_h, "images/Clyde.png" )
+  Clyde.name = 'Clyde'
+  Clyde.direction = Clyde_directions
+  Clyde.turn = c_turn
+  Clyde.step = c_steps
   monsta_list.add(Clyde)
   all_sprites_list.add(Clyde)
 
@@ -448,6 +466,7 @@ def startGame():
   done = False
 
   i = 0
+  start = pygame.time.get_ticks()
 
   while done == False:
       # ALL EVENT PROCESSING SHOULD GO BELOW THIS COMMENT
@@ -510,9 +529,21 @@ def startGame():
       # Check the list of collisions.
       if len(blocks_hit_list) > 0:
           score +=len(blocks_hit_list)
+
+      if len(monsta_list) == 4*32:
+        doNext("Game Over",235,all_sprites_list,block_list,monsta_list,pacman_collide,wall_list,gate)
+
+      
+      if monsta_list: 
+        now = pygame.time.get_ticks()
+        if now - start > 30000:
+          start = now
+          new_ghost_list = spawn(monsta_list, all_sprites_list)
+          # new_ghost_list.extend(ghost)
+      moveGhost(new_ghost_list, wall_list)
       
       # ALL GAME LOGIC SHOULD GO ABOVE THIS COMMENT
-   
+
       # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
       screen.fill(black)
         
@@ -530,13 +561,46 @@ def startGame():
       monsta_hit_list = pygame.sprite.spritecollide(Pacman, monsta_list, False)
 
       if monsta_hit_list:
-        doNext("Game Over",235,all_sprites_list,block_list,monsta_list,pacman_collide,wall_list,gate)
+        # remove monster hit from the all sprites list and monsta list
+        monsta_list.remove(monsta_hit_list[0]),all_sprites_list.remove(monsta_hit_list[0])
+        
+        #doNext("Game Over",235,all_sprites_list,block_list,monsta_list,pacman_collide,wall_list,gate)
 
       # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
       
       pygame.display.flip()
     
       clock.tick(10)
+
+def spawn(monsta_list,all_sprites_list):
+  for monster in monsta_list:
+    if(monster.name == 'Inky'):
+      ghost =Ghost( i_w, m_h, "images/Inky.png" )
+      ghost.direction = Inky_directions
+    if(monster.name == 'Blinky'):
+      ghost =Ghost( w, b_h, "images/Blinky.png" )
+      ghost.direction = Blinky_directions
+    if(monster.name == 'Pinky'):
+      ghost =Ghost( w, m_h, "images/Pinky.png" )
+      ghost.direction = Pinky_directions
+    if(monster.name == 'Clyde'):
+      ghost =Ghost( c_w, m_h, "images/Clyde.png" )
+      ghost.direction = Clyde_directions
+    ghost.turn = 0
+    ghost.step = 0
+    ghost.name = monster.name
+    monsta_list.add(ghost)
+    all_sprites_list.add(ghost)
+  return monsta_list;
+
+def moveGhost(ghostlist, wall_list):
+  for ghost in ghostlist:
+    returned = ghost.changespeed(ghost.direction,False,ghost.turn,ghost.step,il)
+    ghost.turn = returned[0]
+    ghost.step = returned[1]
+    ghost.changespeed(ghost.direction,False,ghost.turn,ghost.step,il)
+    ghost.update(wall_list,False)
+
 
 def doNext(message,left,all_sprites_list,block_list,monsta_list,pacman_collide,wall_list,gate):
   while True:
